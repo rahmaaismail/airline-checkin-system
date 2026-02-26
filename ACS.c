@@ -66,14 +66,65 @@ double getCurrentSimulationTime() {
 /* ===== THREAD FUNCS ==== */
 /* ======================= */
 
+void enqueue(node **queue, customer_info *cust) {
+    node *new_node = (node*)malloc(sizeof(node));
+    new_node->customer = cust;
+    new_node->next = NULL;
+
+    if (*queue == NULL) {
+        *queue = new_node;
+    } else {
+        node *temp = *queue;
+        while (temp->next != NULL)
+            temp = temp->next;
+        temp->next = new_node;
+    }
+}
+
+customer_info* dequeue(node **queue) {
+    if (*queue == NULL)
+        return NULL;
+
+    node *temp = *queue;
+    customer_info *cust = temp->customer;
+
+    *queue = temp->next;
+    free(temp);
+
+    return cust;
+}
+
 void* customer_entry(void* arg) {
+
     customer_info* cust = (customer_info*)arg;
 
+    /* Simulate arrival delay */
     usleep(cust->arrival_time * 100000);
 
-    printf("Customer %d arrived at %.2f\n",
+    printf("Customer %d arrives at %.2f\n",
            cust->user_id,
            getCurrentSimulationTime());
+
+    pthread_mutex_lock(&queue_mutex);
+
+    cust->queue_enter_time = getCurrentSimulationTime();
+
+    if (cust->class_type == BUSINESS) {
+        enqueue(&business_queue, cust);
+        business_count++;
+        printf("Customer %d enters business queue\n",
+               cust->user_id);
+    } else {
+        enqueue(&economy_queue, cust);
+        economy_count++;
+        printf("Customer %d enters economy queue\n",
+               cust->user_id);
+    }
+
+    /* Signal clerks that someone is waiting */
+    pthread_cond_signal(&queue_cond);
+
+    pthread_mutex_unlock(&queue_mutex);
 
     pthread_exit(NULL);
 }
