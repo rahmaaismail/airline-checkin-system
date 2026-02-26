@@ -71,29 +71,52 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    /* Record simulation start time */
+    FILE *fp = fopen(argv[1], "r");
+    if (!fp) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
+
     gettimeofday(&init_time, NULL);
+
+    /* Read number of customers */
+    fscanf(fp, "%d\n", &total_customers);
+
+    customer_info *customers =
+        (customer_info*)malloc(sizeof(customer_info) * total_customers);
+
+    if (!customers) {
+        perror("malloc failed");
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    char line[256];
+
+    for (int i = 0; i < total_customers; i++) {
+
+        fgets(line, sizeof(line), fp);
+
+        sscanf(line, "%d:%d,%d,%d",
+               &customers[i].user_id,
+               &customers[i].class_type,
+               &customers[i].arrival_time,
+               &customers[i].service_time);
+
+        customers[i].queue_enter_time = 0;
+    }
+
+    fclose(fp);
 
     printf("Simulation started...\n");
 
-    /* For now just test threading */
-    total_customers = 3;
-
-    customer_info customers[3] = {
-        {1, ECONOMY, 2, 5},
-        {2, BUSINESS, 4, 3},
-        {3, ECONOMY, 6, 2}
-    };
-
-    pthread_t threads[3];
+    pthread_t *threads =
+        (pthread_t*)malloc(sizeof(pthread_t) * total_customers);
 
     for (int i = 0; i < total_customers; i++) {
-        if (pthread_create(&threads[i], NULL,
-                           customer_entry,
-                           &customers[i]) != 0) {
-            perror("pthread_create");
-            return EXIT_FAILURE;
-        }
+        pthread_create(&threads[i], NULL,
+                       customer_entry,
+                       &customers[i]);
     }
 
     for (int i = 0; i < total_customers; i++) {
@@ -101,6 +124,9 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Simulation finished.\n");
+
+    free(customers);
+    free(threads);
 
     return 0;
 }
