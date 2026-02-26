@@ -22,6 +22,17 @@ typedef struct {
     double queue_enter_time;
 } customer_info;
 
+typedef struct node {
+    customer_info *customer;
+    struct node *next;
+} node;
+
+node *business_queue = NULL;
+node *economy_queue = NULL;
+
+int business_count = 0;
+int economy_count = 0;
+
 /* ======================= */
 /* ===== GLOBALS ========= */
 /* ======================= */
@@ -33,6 +44,9 @@ double business_waiting_time = 0;
 double economy_waiting_time = 0;
 
 int total_customers = 0;
+
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
 
 /* ======================= */
 /* ===== TIME FUNC ======= */
